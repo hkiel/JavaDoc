@@ -23,7 +23,7 @@
  * @version  ##tool.prettyVersion##
  */
 
-package template.tool;
+package javadoc.tool;
 
 import processing.app.Base;
 import processing.app.Platform;
