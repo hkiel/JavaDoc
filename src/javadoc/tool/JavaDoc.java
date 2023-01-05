@@ -29,6 +29,7 @@ import processing.app.Base;
 import processing.app.Platform;
 import processing.app.Sketch;
 import processing.app.SketchCode;
+import processing.app.Preferences;
 import processing.app.tools.Tool;
 import processing.app.ui.Editor;
 import java.io.File;
@@ -38,6 +39,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.FileWriter;
 import java.lang.StringBuilder;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 
 // when creating a tool, the name of the main class which implements Tool must
 // be the same as the value defined for project.name in your build.properties
@@ -56,7 +65,32 @@ public class JavaDoc implements Tool {
     this.base = base;
   }
 
+  public static List<String> findFiles(Path path, String fileExtension)
+        throws IOException {
+
+        if (!Files.isDirectory(path)) {
+            throw new IllegalArgumentException("Path must be a directory!");
+        }
+
+        List<String> result;
+
+        try (Stream<Path> walk = Files.walk(path)) {
+            result = walk
+                    .filter(p -> !Files.isDirectory(p))
+                    // this is a path, not string,
+                    // convert path to string first
+                    .map(p -> p.toString().toLowerCase())
+                    // this only test if pathname ends with a certain extension
+                    .filter(f -> f.endsWith(fileExtension))
+                    .collect(Collectors.toList());
+        }
+
+        return result;
+    }
+
   public void run() {
+    boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
+
     // Get the currently active Editor to run the Tool on it
     Editor editor = base.getActiveEditor();
 
@@ -65,6 +99,19 @@ public class JavaDoc implements Tool {
     //System.out.println("JavaDoc Tool. ##tool.name## ##tool.prettyVersion## by ##author##");
     Sketch sketch = editor.getSketch();
     System.out.println("Generating JavaDoc for Sketch \""+sketch.getName()+"\"");
+
+    String extraLibs = "";
+    try {
+            List<String> files = findFiles(Paths.get(Preferences.getSketchbookPath()+(isWindows?'\\':'/')+"libraries"), "jar");
+            //files.forEach(x -> System.out.println(x));
+            if (!files.isEmpty()) {
+              extraLibs = isWindows?";":":" + String.join(isWindows?";":":", files);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     File folder = sketch.getFolder();
     SketchCode codes[] = sketch.getCode();
     //System.out.println(folder.getAbsolutePath());
@@ -132,13 +179,12 @@ public class JavaDoc implements Tool {
       myWriter.write("\n}\n\n");
       myWriter.close();
 
-      boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
       ProcessBuilder builder = new ProcessBuilder(
           System.getProperty("java.home") + (isWindows?"\\bin\\javadoc":"/bin/javadoc"),
           src.getAbsolutePath(),
           "-d", ref.getAbsolutePath(),
           "-package", "-quiet",
-          "-cp", System.getProperty("java.class.path")
+          "-cp", System.getProperty("java.class.path") + extraLibs
           );
       Process process = builder.start();
 
