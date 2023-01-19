@@ -65,28 +65,45 @@ public class JavaDoc implements Tool {
     this.base = base;
   }
 
-  public static List<String> findFiles(Path path, String fileExtension)
-        throws IOException {
+  public static List<String> findFiles(Path path, String fileExtension) throws IOException {
 
-        if (!Files.isDirectory(path)) {
-            throw new IllegalArgumentException("Path must be a directory!");
-        }
-
-        List<String> result;
-
-        try (Stream<Path> walk = Files.walk(path)) {
-            result = walk
-                    .filter(p -> !Files.isDirectory(p))
-                    // this is a path, not string,
-                    // convert path to string first
-                    .map(p -> p.toString().toLowerCase())
-                    // this only test if pathname ends with a certain extension
-                    .filter(f -> f.endsWith(fileExtension))
-                    .collect(Collectors.toList());
-        }
-
-        return result;
+    if (!Files.isDirectory(path)) {
+        throw new IllegalArgumentException("Path must be a directory!");
     }
+
+    List<String> result;
+
+    try (Stream<Path> walk = Files.walk(path)) {
+        result = walk
+                .filter(p -> !Files.isDirectory(p))
+                // this is a path, not string,
+                // convert path to string first
+                .map(p -> p.toString().toLowerCase())
+                // this only test if pathname ends with a certain extension
+                .filter(f -> f.endsWith(fileExtension))
+                .collect(Collectors.toList());
+    }
+
+    return result;
+  }
+
+  private String getJarsInDir(File file) {
+    return getJarsInDir(file.toPath());
+  }
+
+  private String getJarsInDir(Path path) {
+    String extraLibs = "";
+    boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
+    try {
+      List<String> files = findFiles(path, "jar");
+      if (!files.isEmpty()) {
+        extraLibs = isWindows?";":":" + String.join(isWindows?";":":", files);
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return extraLibs;
+  }
 
   public void run() {
     boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
@@ -100,21 +117,12 @@ public class JavaDoc implements Tool {
     Sketch sketch = editor.getSketch();
     System.out.println("Generating JavaDoc for Sketch \""+sketch.getName()+"\"");
 
-    String extraLibs = "";
-    try {
-            List<String> files = findFiles(Paths.get(Preferences.getSketchbookPath()+(isWindows?'\\':'/')+"libraries"), "jar");
-            //files.forEach(x -> System.out.println(x));
-            if (!files.isEmpty()) {
-              extraLibs = isWindows?";":":" + String.join(isWindows?";":":", files);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
     File folder = sketch.getFolder();
+    String extraLibs = getJarsInDir(Paths.get(Preferences.getSketchbookPath()+(isWindows?'\\':'/')+"libraries"));
+    extraLibs += getJarsInDir(folder);
+    extraLibs += getJarsInDir(processing.app.Platform.getContentFile("modes/java/libraries"));
     SketchCode codes[] = sketch.getCode();
-    //System.out.println(folder.getAbsolutePath());
     String mainTab = codes[0].getProgram();
     if (!mainTab.contains("setup") && !mainTab.contains("draw")) {
         System.err.println("Can only generate JavaDoc for sketches in dynamic mode.");
