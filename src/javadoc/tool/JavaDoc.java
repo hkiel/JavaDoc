@@ -74,13 +74,14 @@ public class JavaDoc implements Tool {
     List<String> result;
 
     try (Stream<Path> walk = Files.walk(path)) {
+      System.out.println("Walking "+path.toString());
         result = walk
                 .filter(p -> !Files.isDirectory(p))
                 // this is a path, not string,
                 // convert path to string first
-                .map(p -> p.toString().toLowerCase())
+                .map(p -> p.toAbsolutePath().toString())
                 // this only test if pathname ends with a certain extension
-                .filter(f -> f.endsWith(fileExtension))
+                .filter(f -> f.toLowerCase().endsWith(fileExtension))
                 .collect(Collectors.toList());
     }
 
@@ -97,7 +98,7 @@ public class JavaDoc implements Tool {
     try {
       List<String> files = findFiles(path, "jar");
       if (!files.isEmpty()) {
-        extraLibs = isWindows?";":":" + String.join(isWindows?";":":", files);
+        extraLibs = (isWindows?";":":") + String.join(isWindows?";":":", files);
       }
     } catch (IOException e) {
       e.printStackTrace();
