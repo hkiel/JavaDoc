@@ -68,21 +68,21 @@ public class JavaDoc implements Tool {
   public static List<String> findFiles(Path path, String fileExtension) throws IOException {
 
     if (!Files.isDirectory(path)) {
-        throw new IllegalArgumentException("Path must be a directory!");
+      throw new IllegalArgumentException("Path must be a directory!");
     }
 
     List<String> result;
 
     try (Stream<Path> walk = Files.walk(path)) {
-      System.out.println("Walking "+path.toString());
-        result = walk
-                .filter(p -> !Files.isDirectory(p))
-                // this is a path, not string,
-                // convert path to string first
-                .map(p -> p.toAbsolutePath().toString())
-                // this only test if pathname ends with a certain extension
-                .filter(f -> f.toLowerCase().endsWith(fileExtension))
-                .collect(Collectors.toList());
+      //System.out.println("Walking "+path.toString());
+      result = walk
+               .filter(p -> !Files.isDirectory(p))
+               // this is a path, not string,
+               // convert path to string first
+               .map(p -> p.toAbsolutePath().toString())
+               // this only test if pathname ends with a certain extension
+               .filter(f -> f.toLowerCase().endsWith(fileExtension))
+               .collect(Collectors.toList());
     }
 
     return result;
@@ -122,12 +122,12 @@ public class JavaDoc implements Tool {
     File folder = sketch.getFolder();
     String extraLibs = getJarsInDir(Paths.get(Preferences.getSketchbookPath()+(isWindows?'\\':'/')+"libraries"));
     extraLibs += getJarsInDir(folder);
-    extraLibs += getJarsInDir(processing.app.Platform.getContentFile("modes/java/libraries"));
+    extraLibs += getJarsInDir(Platform.getContentFile("modes/java/libraries"));
     SketchCode codes[] = sketch.getCode();
     String mainTab = codes[0].getProgram();
     if (!mainTab.contains("setup") && !mainTab.contains("draw")) {
-        System.err.println("Can only generate JavaDoc for sketches in dynamic mode.");
-        return;
+      System.err.println("Can only generate JavaDoc for sketches in dynamic mode.");
+      return;
     }
     try {
       File ref = new File(folder, "reference");
@@ -144,23 +144,22 @@ public class JavaDoc implements Tool {
           boolean blockComment = false;
           for (String line : code) {
             if (blockComment) {
-                int lineComment = line.indexOf("//");
-                int stopComment = line.indexOf("*/");
-                if (stopComment>=0) {
-                    int startComment = line.indexOf("/*");
-                    if (startComment<stopComment) {
-                        blockComment = false;
-                    }
-                }
-            } else {
-                int lineComment = line.indexOf("//");
+              int stopComment = line.indexOf("*/");
+              if (stopComment >= 0) {
                 int startComment = line.indexOf("/*");
-                if (startComment>=0 && (lineComment<0 || lineComment>startComment)) {
-                    int stopComment = line.indexOf("*/");
-                    if (startComment>stopComment) {
-                        blockComment = true;
-                    }
+                  if (startComment < stopComment) {
+                    blockComment = false;
+                  }
+              }
+            } else {
+              int lineComment = line.indexOf("//");
+              int startComment = line.indexOf("/*");
+              if (startComment >= 0 && (lineComment < 0 || lineComment > startComment)) {
+                int stopComment = line.indexOf("*/");
+                if (startComment > stopComment) {
+                  blockComment = true;
                 }
+              }
             }
             if (!blockComment && line.trim().startsWith("import")) {
               imports.append(line);
