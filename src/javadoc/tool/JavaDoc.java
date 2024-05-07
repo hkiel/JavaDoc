@@ -38,11 +38,11 @@ import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.FileWriter;
-import java.lang.StringBuilder;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -123,7 +123,7 @@ public class JavaDoc implements Tool {
     String extraLibs = getJarsInDir(Paths.get(Preferences.getSketchbookPath()+(isWindows?'\\':'/')+"libraries"));
     extraLibs += getJarsInDir(folder);
     extraLibs += getJarsInDir(Platform.getContentFile("modes/java/libraries"));
-    SketchCode codes[] = sketch.getCode();
+    SketchCode[] codes = sketch.getCode();
     String mainTab = codes[0].getProgram();
     if (!mainTab.contains("setup") && !mainTab.contains("draw")) {
       System.err.println("Can only generate JavaDoc for sketches in dynamic mode.");
@@ -135,42 +135,47 @@ public class JavaDoc implements Tool {
 
       StringBuilder main = new StringBuilder();
       StringBuilder imports = new StringBuilder();
+      List<String> javaFiles = new ArrayList<>();
 
       for (SketchCode c : codes) {
-        String tab = c.getProgram();
-        boolean hasImports = tab.indexOf("import")>=0;
-        if (hasImports) {
-          String[] code = tab.split("\n");
-          boolean blockComment = false;
-          for (String line : code) {
-            if (blockComment) {
-              int stopComment = line.indexOf("*/");
-              if (stopComment >= 0) {
-                int startComment = line.indexOf("/*");
-                  if (startComment < stopComment) {
-                    blockComment = false;
-                  }
-              }
-            } else {
-              int lineComment = line.indexOf("//");
-              int startComment = line.indexOf("/*");
-              if (startComment >= 0 && (lineComment < 0 || lineComment > startComment)) {
+        if (c.getExtension().equals("java")) {
+          javaFiles.add(c.getFile().getAbsolutePath());
+        } else {
+          String tab = c.getProgram();
+          boolean hasImports = tab.indexOf("import")>=0;
+          if (hasImports) {
+            String[] code = tab.split("\n");
+            boolean blockComment = false;
+            for (String line : code) {
+              if (blockComment) {
                 int stopComment = line.indexOf("*/");
-                if (startComment > stopComment) {
-                  blockComment = true;
+                if (stopComment >= 0) {
+                  int startComment = line.indexOf("/*");
+                    if (startComment < stopComment) {
+                      blockComment = false;
+                    }
+                }
+              } else {
+                int lineComment = line.indexOf("//");
+                int startComment = line.indexOf("/*");
+                if (startComment >= 0 && (lineComment < 0 || lineComment > startComment)) {
+                  int stopComment = line.indexOf("*/");
+                  if (startComment > stopComment) {
+                    blockComment = true;
+                  }
                 }
               }
+              if (!blockComment && line.trim().startsWith("import")) {
+                imports.append(line);
+                imports.append("\n");
+              } else {
+                main.append(line);
+                main.append("\n");
+              }
             }
-            if (!blockComment && line.trim().startsWith("import")) {
-              imports.append(line);
-              imports.append("\n");
-            } else {
-              main.append(line);
-              main.append("\n");
-            }
+          } else {
+            main.append(tab);
           }
-        } else {
-          main.append(tab);
         }
       }
 
@@ -182,18 +187,24 @@ public class JavaDoc implements Tool {
       // then Sketch main class
       myWriter.write("import processing.core.*;\nimport processing.data.*;\nimport processing.event.*;\nimport processing.opengl.*;\nimport java.util.HashMap;\nimport java.util.ArrayList;\nimport java.io.File;\nimport java.io.BufferedReader;\nimport java.io.PrintWriter;\nimport java.io.InputStream;\nimport java.io.OutputStream;\nimport java.io.IOException;\n\n");
 
-      myWriter.write("/** "+sketch.getName()+" */\npublic class "+sketch.getName()+" {\n");
+      myWriter.write("/** Processing Sketch "+sketch.getName()+" */\npublic class "+sketch.getName()+" {\n");
       myWriter.write(main.toString().replace("#", "0x").replaceAll("\\bint\\b\\s*[(]", "PApplet.parseInt(").replaceAll("\\bfloat\\b\\s*[(]", "PApplet.parseFloat(").replaceAll("\\bboolean\\b\\s*[(]", "PApplet.parseBoolean(").replaceAll("\\bbyte\\b\\s*[(]", "PApplet.parseByte(").replaceAll("\\bchar\\b\\s*[(]", "PApplet.parseChar(").replaceAll("\\b(color)\\b\\s*([^\\(])", "int $2"));
       myWriter.write("\n}\n\n");
       myWriter.close();
 
-      ProcessBuilder builder = new ProcessBuilder(
-          System.getProperty("java.home") + (isWindows?"\\bin\\javadoc":"/bin/javadoc"),
-          src.getAbsolutePath(),
-          "-d", ref.getAbsolutePath(),
-          "-package", "-quiet",
-          "-cp", System.getProperty("java.class.path") + extraLibs
-          );
+      List<String> command = new ArrayList<>();
+      command.add(System.getProperty("java.home") + (isWindows?"\\bin\\javadoc":"/bin/javadoc"));
+      command.add(src.getAbsolutePath());
+      for (String j : javaFiles) {
+        command.add(j);
+      }
+      command.add("-d");
+      command.add(ref.getAbsolutePath());
+      command.add("-package");
+      command.add("-quiet");
+      command.add("-cp");
+      command.add(System.getProperty("java.class.path") + extraLibs);
+      ProcessBuilder builder = new ProcessBuilder(command);
       Process process = builder.start();
 
       String lines;
