@@ -48,9 +48,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
-// when creating a tool, the name of the main class which implements Tool must
-// be the same as the value defined for project.name in your build.properties
-
 public class JavaDoc implements Tool {
   Base base;
 
@@ -58,7 +55,6 @@ public class JavaDoc implements Tool {
   public String getMenuTitle() {
     return "generate JavaDoc";
   }
-
 
   public void init(Base base) {
     // Store a reference to the Processing application itself
@@ -193,7 +189,7 @@ public class JavaDoc implements Tool {
       myWriter.close();
 
       List<String> command = new ArrayList<>();
-      command.add(System.getProperty("java.home") + (isWindows?"\\bin\\javadoc":"/bin/javadoc"));
+      command.add(Platform.getJavaHome() + (isWindows?"\\bin\\javadoc":"/bin/javadoc"));
       command.add(src.getAbsolutePath());
       for (String j : javaFiles) {
         command.add(j);
