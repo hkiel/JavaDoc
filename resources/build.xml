@@ -213,7 +213,6 @@ ${line}
 		<javadoc bottom="Processing tool ${project.name} by ${author.name}. ${tool.copyright}" 
 				destdir="${project.tmp}/${project.name}/reference" 
 				verbose="false" 
-				stylesheetfile="resources/stylesheet.css" 
 				doctitle="Javadocs: ${project.name}" 
 				public="true" version="false" 
 				windowtitle="Javadocs: ${project.name}">

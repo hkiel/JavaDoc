@@ -65,6 +65,10 @@ public class JavaDoc implements Tool {
     + "|'(?:[^'\\\\\\n]++|\\\\.)*+'");
 
 
+  // decimal numbers without suffix, which are of type float in Processing
+  private static final String DECIMAL =
+    "(?<![\\w.])((?:\\d+\\.\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?|\\d+[eE][+-]?\\d+)(?![\\w.])";
+
   public String getMenuTitle() {
     return "generate JavaDoc";
   }
@@ -146,6 +150,7 @@ public class JavaDoc implements Tool {
 
   private static String translate(String code) {
     return code.replace("#", "0x")
+      .replaceAll(DECIMAL, "$1f")
       .replaceAll("\\bint\\b\\s*[(]", "PApplet.parseInt(")
       .replaceAll("\\bfloat\\b\\s*[(]", "PApplet.parseFloat(")
       .replaceAll("\\bboolean\\b\\s*[(]", "PApplet.parseBoolean(")
@@ -254,7 +259,7 @@ public class JavaDoc implements Tool {
       myWriter.write(imports.toString());
       myWriter.write("\n");
       // then Sketch main class
-      myWriter.write("import processing.core.*;\nimport processing.data.*;\nimport processing.event.*;\nimport processing.opengl.*;\nimport java.util.HashMap;\nimport java.util.ArrayList;\nimport java.io.File;\nimport java.io.BufferedReader;\nimport java.io.PrintWriter;\nimport java.io.InputStream;\nimport java.io.OutputStream;\nimport java.io.IOException;\n\n");
+      myWriter.write("import processing.core.*;\nimport processing.data.*;\nimport processing.event.*;\nimport processing.opengl.*;\nimport static processing.core.PConstants.*;\nimport java.util.HashMap;\nimport java.util.ArrayList;\nimport java.io.File;\nimport java.io.BufferedReader;\nimport java.io.PrintWriter;\nimport java.io.InputStream;\nimport java.io.OutputStream;\nimport java.io.IOException;\n\n");
 
       myWriter.write("/** Processing Sketch "+sketch.getName()+" */\npublic class "+sketch.getName()+" {\n");
       myWriter.write(toJava(main.toString()));
